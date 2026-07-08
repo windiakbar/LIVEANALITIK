@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Streamer</title>
+    
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            750: '#293548',
+                            850: '#151e2e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Custom CSS untuk Scrollbar dan Print -->
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
+        
+        @media print {
+            body { background-color: white !important; }
+            .print\:hidden { display: none !important; }
+            .print\:block { display: block !important; }
+            .print\:static { position: static !important; }
+            .print\:p-0 { padding: 0 !important; }
+            .print\:m-0 { margin: 0 !important; }
+            .print\:bg-white { background-color: white !important; }
+            .print\:bg-transparent { background-color: transparent !important; }
+            .print\:border-slate-300 { border-color: #cbd5e1 !important; }
+            .print\:bg-slate-100 { background-color: #f1f5f9 !important; }
+            .print\:text-black { color: black !important; }
+            .print\:text-slate-600 { color: #475569 !important; }
+            .print\:border-2 { border-width: 2px !important; }
+            .print\:border-slate-900 { border-color: #0f172a !important; }
+            .print\:shadow-none { box-shadow: none !important; }
+            .print\:rounded-none { border-radius: 0 !important; }
+            .print\:overflow-visible { overflow: visible !important; }
+        }
+    </style>
+
+    <!-- React & ReactDOM Standalone -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Babel untuk kompilasi JSX di Browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased selection:bg-indigo-500 selection:text-white">
+    
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // ==========================================
+        // IKON (SVG Inline Pengganti Lucide-React)
+        // ==========================================
+        const SvgIcon = ({ children, ...props }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+                {children}
+            </svg>
+        );
+
+        const Search = (props) => <SvgIcon {...props}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></SvgIcon>;
+        const Calendar = (props) => <SvgIcon {...props}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></SvgIcon>;
+        const User = (props) => <SvgIcon {...props}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></SvgIcon>;
+        const ImageIcon = (props) => <SvgIcon {...props}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></SvgIcon>;
+        const X = (props) => <SvgIcon {...props}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></SvgIcon>;
+        const Loader2 = (props) => <SvgIcon {...props}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></SvgIcon>;
+        const DollarSign = (props) => <SvgIcon {...props}><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></SvgIcon>;
+        const Package = (props) => <SvgIcon {...props}><line x1="16.5" x2="7.5" y1="9.4" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" x2="12" y1="22.08" y2="12"/></SvgIcon>;
+        const Clock = (props) => <SvgIcon {...props}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></SvgIcon>;
+        const Filter = (props) => <SvgIcon {...props}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></SvgIcon>;
+        const RefreshCw = (props) => <SvgIcon {...props}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></SvgIcon>;
+        const CalendarDays = (props) => <SvgIcon {...props}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></SvgIcon>;
+        const ShoppingBag = (props) => <SvgIcon {...props}><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></SvgIcon>;
+        const ChevronLeft = (props) => <SvgIcon {...props}><path d="m15 18-6-6 6-6"/></SvgIcon>;
+        const ChevronRight = (props) => <SvgIcon {...props}><path d="m9 18 6-6-6-6"/></SvgIcon>;
+        const LayoutDashboard = (props) => <SvgIcon {...props}><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></SvgIcon>;
+        const Wallet = (props) => <SvgIcon {...props}><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></SvgIcon>;
+        const Receipt = (props) => <SvgIcon {...props}><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/></SvgIcon>;
+        const Printer = (props) => <SvgIcon {...props}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></SvgIcon>;
+        const Lock = (props) => <SvgIcon {...props}><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></SvgIcon>;
+        const ArrowRightLeft = (props) => <SvgIcon {...props}><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></SvgIcon>;
+
+
+        // ==========================================
+        // KONFIGURASI LOGIKA & DATA
+        // ==========================================
+        const SHEET_ID = '1hF2b5AMTIS90psdnUYXNUxVZyvkde_HChu3d3aaqqMY';
+        const SHEET_NAME = 'LOG';
+        const JSON_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
+
+        const parseImageUrl = (url) => {
+            if (!url || typeof url !== 'string' || url.trim() === '') return null;
+            const cleanUrl = url.trim();
+            const driveMatch = cleanUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) || cleanUrl.match(/id=([a-zA-Z0-9_-]+)/);
+            if (driveMatch && driveMatch[1]) {
+                return { isDrive: true, driveId: driveMatch[1], originalUrl: cleanUrl };
+            }
+            return { isDrive: false, url: cleanUrl, originalUrl: cleanUrl };
+        };
+
+        const formatIDR = (value) => {
+            if (value === null || value === undefined) return 'Rp 0';
+            const number = parseFloat(String(value).replace(/[^0-9.-]+/g, "")) || 0;
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                maximumFractionDigits: 0
+            }).format(number);
+        };
+
+        const formatIDRInput = (val) => {
+            if (!val) return '';
+            const num = val.toString().replace(/[^0-9]/g, '');
+            if (!num) return '';
+            return parseInt(num, 10).toLocaleString('id-ID');
+        };
+
+        const parseDateString = (dateStr) => {
+            if (!dateStr) return null;
+            try {
+                const trimmed = dateStr.trim();
+                const parts = trimmed.split(' ');
+                if (parts.length > 0) {
+                    const datePart = parts[0]; 
+                    const dateSegments = datePart.split(/[\/\-]/);
+                    if (dateSegments.length === 3) {
+                        const day = parseInt(dateSegments[0], 10);
+                        const month = parseInt(dateSegments[1], 10) - 1;
+                        let year = parseInt(dateSegments[2], 10);
+                        if (year < 100) year += 2000; 
+                        
+                        let hours = 0, minutes = 0, seconds = 0;
+                        if (parts.length > 1) {
+                            const timeSegments = parts[1].split(/[\.\:]/);
+                            if (timeSegments.length >= 2) {
+                                hours = parseInt(timeSegments[0], 10) || 0;
+                                minutes = parseInt(timeSegments[1], 10) || 0;
+                                seconds = parseInt(timeSegments[2], 10) || 0;
+                            }
+                        }
+                        
+                        const dateObj = new Date(year, month, day, hours, minutes, seconds);
+                        if (!isNaN(dateObj.getTime())) {
+                            return dateObj;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn("Gagal parsing tanggal:", dateStr, e);
+            }
+            const fallbackDate = new Date(dateStr);
+            return isNaN(fallbackDate.getTime()) ? null : fallbackDate;
+        };
+
+        const formatReadableDate = (dateObj) => {
+            if (!dateObj) return '-';
+            return dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+        };
+
+        // ==========================================
+        // KOMPONEN UI LOCK SCREEN PIN
+        // ==========================================
+        const PinLock = ({ onSuccess, onCancel }) => {
+            const [pin, setPin] = useState('');
+            const [error, setError] = useState('');
+
+            const handleNumberClick = (num) => {
+                setError('');
+                if (pin.length < 6) {
+                    const newPin = pin + num;
+                    setPin(newPin);
+                    if (newPin === '138080') {
+                        onSuccess();
+                    } else if (newPin.length === 6) {
+                        setError('PIN Salah! Silakan coba lagi.');
+                        setTimeout(() => setPin(''), 1000);
+                    }
+                }
+            };
+
+            const handleBackspace = () => setPin(prev => prev.slice(0, -1));
+            const handleClear = () => setPin('');
+
+            return (
+                <div className="flex flex-col items-center justify-center py-10 px-4 min-h-[60vh]">
+                <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-center relative overflow-hidden">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+                    
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-400 mb-5 border border-indigo-500/20 relative z-10">
+                    <Lock className="w-6 h-6" />
+                    </div>
+                    <h2 className="text-xl font-bold text-white mb-1 relative z-10">Akses Terkunci</h2>
+                    <p className="text-slate-400 text-xs mb-6 relative z-10">Masukkan PIN Keamanan untuk membuka Menu Gaji Host</p>
+                    
+                    <div className="flex justify-center gap-3.5 mb-6 relative z-10">
+                    {[0, 1, 2, 3, 4, 5].map((i) => (
+                        <div
+                        key={i}
+                        className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full transition-all duration-150 ${
+                            pin.length > i 
+                            ? 'bg-indigo-500 scale-110 shadow-[0_0_10px_rgba(99,102,241,0.6)]' 
+                            : 'bg-slate-800 border border-slate-700'
+                        }`}
+                        />
+                    ))}
+                    </div>
+
+                    <div className="h-6 mb-4 relative z-10">
+                    {error ? (
+                        <p className="text-rose-400 text-xs font-semibold animate-pulse">{error}</p>
+                    ) : (
+                        <p className="text-slate-500 text-xs">Konfirmasi PIN 6 digit</p>
+                    )}
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3 mb-6 max-w-[240px] mx-auto relative z-10">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                        <button
+                        key={num}
+                        type="button"
+                        onClick={() => handleNumberClick(num.toString())}
+                        className="h-12 sm:h-14 rounded-xl bg-slate-850/60 hover:bg-slate-800/80 active:scale-95 active:bg-slate-700 text-xl font-bold text-white transition-all border border-slate-800 hover:border-slate-700 flex items-center justify-center select-none touch-manipulation"
+                        >
+                        {num}
+                        </button>
+                    ))}
+                    <button type="button" onClick={handleClear} className="h-12 sm:h-14 rounded-xl bg-slate-900/40 hover:bg-slate-800/80 active:scale-95 text-sm font-semibold text-slate-400 hover:text-white transition-all flex items-center justify-center select-none border border-transparent hover:border-slate-800 touch-manipulation">
+                        C
+                    </button>
+                    <button type="button" onClick={() => handleNumberClick('0')} className="h-12 sm:h-14 rounded-xl bg-slate-850/60 hover:bg-slate-800/80 active:scale-95 active:bg-slate-700 text-xl font-bold text-white transition-all border border-slate-800 hover:border-slate-700 flex items-center justify-center select-none touch-manipulation">
+                        0
+                    </button>
+                    <button type="button" onClick={handleBackspace} className="h-12 sm:h-14 rounded-xl bg-slate-900/40 hover:bg-slate-800/80 active:scale-95 text-sm text-slate-400 hover:text-white transition-all flex items-center justify-center select-none border border-transparent hover:border-slate-800 touch-manipulation">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9.75L14.25 12m0 0l2.25 2.25M14.25 12l2.25-2.25M14.25 12L12 14.25m-2.58 4.92l-6.375-6.375a1.125 1.125 0 010-1.59L9.42 4.83c.211-.211.498-.33.796-.33H19.5a2.25 2.25 0 012.25 2.25v10.5a2.25 2.25 0 01-2.25 2.25h-9.284c-.298 0-.585-.119-.796-.33z" />
+                        </svg>
+                    </button>
+                    </div>
+
+                    <button type="button" onClick={onCancel} className="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors hover:underline p-2">
+                    Kembali ke Dashboard
+                    </button>
+                </div>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // KOMPONEN UTAMA APLIKASI
+        // ==========================================
+        function App() {
+            const [data, setData] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+            const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [isSalaryUnlocked, setIsSalaryUnlocked] = useState(false);
+
+            const [selectedHost, setSelectedHost] = useState('All');
+            const [startDateStr, setStartDateStr] = useState('');
+            const [endDateStr, setEndDateStr] = useState('');
+            const [searchQuery, setSearchQuery] = useState('');
+
+            const [selectedImage, setSelectedImage] = useState(null);
+            const [currentPage, setCurrentPage] = useState(1);
+            const itemsPerPage = 10;
+
+            const [salaryRates, setSalaryRates] = useState({});
+            const [slipToPrint, setSlipToPrint] = useState(null);
+
+            useEffect(() => {
+                const fetchData = async () => {
+                    try {
+                        setLoading(true);
+                        setError(null);
+                        const response = await fetch(`${JSON_URL}&t=${new Date().getTime()}`); 
+                        
+                        if (!response.ok) {
+                            throw new Error('Gagal mengambil data dari Google Sheet. Periksa kembali setelan visibilitas link Anda.');
+                        }
+                        
+                        const textData = await response.text();
+                        const jsonString = textData.match(/(?:^.*\()(\{.*?\})(?:\);?$)/s);
+                        
+                        if (!jsonString || !jsonString[1]) {
+                            throw new Error('Format respon Google Spreadsheet tidak valid.');
+                        }
+                        
+                        const jsonData = JSON.parse(jsonString[1]);
+                        
+                        const mappedData = jsonData.table.rows.map((row, index) => {
+                            const getVal = (idx) => {
+                                if (!row || !row.c || !row.c[idx]) return '';
+                                const cell = row.c[idx];
+                                return cell.f !== undefined && cell.f !== null 
+                                ? String(cell.f) 
+                                : (cell.v !== null && cell.v !== undefined ? String(cell.v) : '');
+                            };
+                            
+                            const rawDateStr = getVal(0);
+                            const parsedDate = parseDateString(rawDateStr);
+
+                            return {
+                                id: index,
+                                tanggalWaktu: rawDateStr,           
+                                parsedDate: parsedDate,             
+                                namaHost: getVal(1),               
+                                durasiLive: getVal(5),             
+                                produkShopee: getVal(6) || '0',    
+                                gmvShopee: getVal(7) || '0',       
+                                produkTiktok: getVal(8) || '0',    
+                                gmvTiktok: getVal(9) || '0',       
+                                totalGmv: getVal(10) || '0',       
+                                linkFoto: getVal(11),              
+                                parsedImage: parseImageUrl(getVal(11)),
+                            };
+                        }).filter(item => {
+                            const isHeader = item.tanggalWaktu.trim() === '' || 
+                                            item.tanggalWaktu.toLowerCase() === 'tanggal' || 
+                                            item.tanggalWaktu.toLowerCase() === 'date';
+                            
+                            const hasDuration = item.durasiLive && 
+                                                item.durasiLive.trim() !== '' && 
+                                                item.durasiLive.trim() !== '-';
+
+                            return !isHeader && hasDuration;
+                        });
+
+                        setData(mappedData);
+                        setLoading(false);
+                    } catch (err) {
+                        setError(err.message);
+                        setLoading(false);
+                    }
+                };
+
+                fetchData();
+            }, [refreshTrigger]);
+
+            const hostsList = useMemo(() => {
+                const uniqueHosts = [...new Set(data.map(item => item.namaHost).filter(Boolean))];
+                return ['All', ...uniqueHosts.sort()];
+            }, [data]);
+
+            const filteredData = useMemo(() => {
+                return data.filter(item => {
+                    const matchHost = selectedHost === 'All' || item.namaHost === selectedHost;
+                    const cleanQuery = searchQuery.toLowerCase().trim();
+                    const matchSearch = cleanQuery === '' || 
+                                        item.namaHost.toLowerCase().includes(cleanQuery) ||
+                                        item.tanggalWaktu.toLowerCase().includes(cleanQuery);
+
+                    let matchDate = true;
+                    if (item.parsedDate) {
+                        const itemDateVal = new Date(item.parsedDate.getFullYear(), item.parsedDate.getMonth(), item.parsedDate.getDate()).getTime();
+
+                        if (startDateStr) {
+                            const startLimit = new Date(startDateStr);
+                            const startLimitVal = new Date(startLimit.getFullYear(), startLimit.getMonth(), startLimit.getDate()).getTime();
+                            if (itemDateVal < startLimitVal) matchDate = false;
+                        }
+                        
+                        if (endDateStr) {
+                            const endLimit = new Date(endDateStr);
+                            const endLimitVal = new Date(endLimit.getFullYear(), endLimit.getMonth(), endLimit.getDate()).getTime();
+                            if (itemDateVal > endLimitVal) matchDate = false;
+                        }
+                    } else {
+                        if (startDateStr || endDateStr) matchDate = false;
+                    }
+
+                    return matchHost && matchSearch && matchDate;
+                });
+            }, [data, selectedHost, startDateStr, endDateStr, searchQuery]);
+
+            const stats = useMemo(() => {
+                const parseNum = (val) => parseFloat(String(val).replace(/[^0-9.-]+/g, "")) || 0;
+                
+                return filteredData.reduce((acc, curr) => {
+                    const shopeeGmvVal = parseNum(curr.gmvShopee);
+                    const tiktokGmvVal = parseNum(curr.gmvTiktok);
+                    const totalGmvVal = parseNum(curr.totalGmv);
+                    const shopeeQty = parseNum(curr.produkShopee);
+                    const tiktokQty = parseNum(curr.produkTiktok);
+
+                    acc.shopeeGMV += shopeeGmvVal;
+                    acc.tiktokGMV += tiktokGmvVal;
+                    acc.combinedGMV += totalGmvVal;
+                    acc.shopeeQtySold += shopeeQty;
+                    acc.tiktokQtySold += tiktokQty;
+                    acc.totalSessions += 1;
+
+                    return acc;
+                }, { shopeeGMV: 0, tiktokGMV: 0, combinedGMV: 0, shopeeQtySold: 0, tiktokQtySold: 0, totalSessions: 0 });
+            }, [filteredData]);
+
+            const paginatedData = useMemo(() => {
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                return filteredData.slice(startIndex, startIndex + itemsPerPage);
+            }, [filteredData, currentPage]);
+
+            const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
+
+            useEffect(() => {
+                setCurrentPage(1);
+            }, [selectedHost, startDateStr, endDateStr, searchQuery]);
+
+            const salaryData = useMemo(() => {
+                const periodData = data.filter(item => {
+                    let matchDate = true;
+                    if (item.parsedDate) {
+                        const itemDateVal = new Date(item.parsedDate.getFullYear(), item.parsedDate.getMonth(), item.parsedDate.getDate()).getTime();
+                        if (startDateStr) {
+                            const startLimit = new Date(startDateStr);
+                            if (itemDateVal < new Date(startLimit.getFullYear(), startLimit.getMonth(), startLimit.getDate()).getTime()) matchDate = false;
+                        }
+                        if (endDateStr) {
+                            const endLimit = new Date(endDateStr);
+                            if (itemDateVal > new Date(endLimit.getFullYear(), endLimit.getMonth(), endLimit.getDate()).getTime()) matchDate = false;
+                        }
+                    } else {
+                        if (startDateStr || endDateStr) matchDate = false;
+                    }
+                    return matchDate;
+                });
+
+                const hostStats = {};
+                periodData.forEach(item => {
+                    if (!item.namaHost) return;
+                    const hName = item.namaHost.trim();
+                    const gmvVal = parseFloat(String(item.totalGmv).replace(/[^0-9.-]+/g, "")) || 0;
+
+                    if (!hostStats[hName]) {
+                        hostStats[hName] = { name: hName, sessions: 0, totalGmvPeriode: 0, sessionDetails: [] };
+                    }
+                    hostStats[hName].sessions += 1;
+                    hostStats[hName].totalGmvPeriode += gmvVal;
+                    hostStats[hName].sessionDetails.push(item);
+                });
+                
+                return Object.values(hostStats).sort((a, b) => b.sessions - a.sessions);
+            }, [data, startDateStr, endDateStr]);
+
+            const handleSalaryRateChange = (hostName, value) => {
+                const num = value.replace(/[^0-9]/g, '');
+                setSalaryRates(prev => ({
+                    ...prev,
+                    [hostName]: num ? parseInt(num, 10) : 0
+                }));
+            };
+
+            const handleResetFilters = () => {
+                setSelectedHost('All');
+                setStartDateStr('');
+                setEndDateStr('');
+                setSearchQuery('');
+            };
+
+            const handlePrint = () => {
+                window.print();
+            };
+
+            if (loading) {
+                return (
+                    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-slate-100 font-sans p-4">
+                        <div className="relative flex items-center justify-center">
+                        <Loader2 className="w-14 h-14 sm:w-16 sm:h-16 animate-spin text-indigo-500 mb-4" />
+                        <div className="absolute w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-slate-800 border-2 border-indigo-400 animate-ping opacity-75"></div>
+                        </div>
+                        <h2 className="text-lg sm:text-xl font-semibold tracking-wider text-slate-300 mt-4 animate-pulse">Memuat Data LOG...</h2>
+                    </div>
+                );
+            }
+
+            if (error) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4 font-sans">
+                        <div className="bg-slate-900 text-red-400 p-6 sm:p-8 rounded-3xl max-w-lg w-full shadow-2xl border border-red-500/20 text-center">
+                        <div className="mx-auto w-14 h-14 flex items-center justify-center bg-red-500/10 rounded-full border border-red-500/30 mb-4">
+                            <X className="w-7 h-7 text-red-400" />
+                        </div>
+                        <h2 className="text-xl sm:text-2xl font-bold mb-3 text-slate-100">Koneksi Gagal</h2>
+                        <p className="text-sm text-slate-400 leading-relaxed mb-6">{error}</p>
+                        <button 
+                            onClick={() => setRefreshTrigger(prev => prev + 1)}
+                            className="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2"
+                        >
+                            <RefreshCw className="w-4 h-4" /> Coba Hubungkan Kembali
+                        </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className={`min-h-screen bg-slate-950 text-slate-100 font-sans antialiased selection:bg-indigo-500 selection:text-white ${slipToPrint ? 'print:overflow-visible' : ''}`}>
+                <div className={`max-w-7xl mx-auto p-3 sm:p-4 md:p-8 space-y-6 sm:space-y-8 ${slipToPrint ? 'print:hidden' : ''}`}>
+                    
+                    <header className="relative bg-slate-900/80 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
+                        <div>
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            Database Aktif
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                            {data.length} Sesi Terbaca
+                            </span>
+                            <button 
+                                onClick={() => setRefreshTrigger(prev => prev + 1)}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white transition-all active:scale-95 cursor-pointer touch-manipulation"
+                                title="Segarkan Data"
+                            >
+                                <RefreshCw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                Segarkan
+                            </button>
+                        </div>
+                        <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight text-white">
+                            Dashboard Streamer
+                        </h1>
+                        </div>
+                        
+                        <div className="flex w-full md:w-auto items-center gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+                        <button 
+                            onClick={() => setActiveTab('dashboard')}
+                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-2.5 sm:px-4 sm:py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all active:scale-95 touch-manipulation ${activeTab === 'dashboard' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
+                        >
+                            <LayoutDashboard className="w-4 h-4" /> <span className="hidden sm:inline">Data</span> Live
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('salary')}
+                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-2.5 sm:px-4 sm:py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all active:scale-95 touch-manipulation ${activeTab === 'salary' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
+                        >
+                            <Wallet className="w-4 h-4" /> Gaji <span className="hidden sm:inline">Host</span>
+                        </button>
+                        </div>
+                    </div>
+                    </header>
+
+                    <section className="bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                        <h2 className="text-sm sm:text-base font-bold text-slate-200 flex items-center gap-2">
+                        <Filter className="w-4 h-4 text-indigo-400" />
+                        Filter & Periode
+                        </h2>
+                        {(selectedHost !== 'All' || startDateStr || endDateStr || searchQuery) && (
+                        <button 
+                            onClick={handleResetFilters}
+                            className="text-[10px] sm:text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1 active:scale-95 p-1"
+                        >
+                            <X className="w-3 h-3" /> <span className="hidden sm:inline">Bersihkan Filter</span><span className="sm:hidden">Reset</span>
+                        </button>
+                        )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                        <div className="space-y-1.5">
+                        <label className="text-[11px] sm:text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                            <CalendarDays className="w-3.5 h-3.5 text-slate-400" /> Tanggal Mulai
+                        </label>
+                        <input 
+                            type="date"
+                            className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 sm:py-3 px-3.5 text-slate-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            value={startDateStr}
+                            onChange={(e) => setStartDateStr(e.target.value)}
+                        />
+                        </div>
+
+                        <div className="space-y-1.5">
+                        <label className="text-[11px] sm:text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-slate-400" /> Tanggal Selesai
+                        </label>
+                        <input 
+                            type="date"
+                            className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 sm:py-3 px-3.5 text-slate-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            value={endDateStr}
+                            onChange={(e) => setEndDateStr(e.target.value)}
+                        />
+                        </div>
+
+                        {activeTab === 'dashboard' && (
+                        <>
+                            <div className="space-y-1.5">
+                            <label className="text-[11px] sm:text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                                <User className="w-3.5 h-3.5 text-slate-400" /> Nama Host
+                            </label>
+                            <select 
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 sm:py-3 px-3.5 text-slate-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none"
+                                value={selectedHost}
+                                onChange={(e) => setSelectedHost(e.target.value)}
+                            >
+                                {hostsList.map(host => (
+                                <option key={host} value={host} className="bg-slate-950">
+                                    {host === 'All' ? 'Semua Host' : host}
+                                </option>
+                                ))}
+                            </select>
+                            </div>
+
+                            <div className="space-y-1.5">
+                            <label className="text-[11px] sm:text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                                <Search className="w-3.5 h-3.5 text-slate-400" /> Pencarian Bebas
+                            </label>
+                            <div className="relative">
+                                <input 
+                                type="text"
+                                placeholder="Cari data..."
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 sm:py-3 pl-9 pr-3 text-slate-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                            </div>
+                            </div>
+                        </>
+                        )}
+                        {activeTab !== 'dashboard' && (
+                        <div className="hidden md:block col-span-2 text-[10px] sm:text-xs text-slate-400 self-center pl-4 border-l border-slate-800">
+                            <p className="font-semibold text-indigo-400 mb-0.5">Pemberitahuan</p>
+                            Filter tanggal di samping akan membatasi rekapitulasi sesi pada slip gaji host di bawah secara real-time.
+                        </div>
+                        )}
+                    </div>
+                    </section>
+
+                    {activeTab === 'dashboard' ? (
+                    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
+                        
+                        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/25 shrink-0">
+                            <DollarSign className="w-5 h-5 sm:w-6 sm:h-6" />
+                            </div>
+                            <div>
+                            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500 mb-0.5">Total GMV</p>
+                            <h3 className="text-sm sm:text-lg md:text-xl font-extrabold text-white leading-tight">{formatIDR(stats.combinedGMV)}</h3>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl bg-orange-500/10 text-orange-400 border border-orange-500/20 shrink-0">
+                            <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6" />
+                            </div>
+                            <div>
+                            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500 mb-0.5">Shopee</p>
+                            <h3 className="text-sm sm:text-lg font-bold text-slate-100 leading-tight">{formatIDR(stats.shopeeGMV)}</h3>
+                            <p className="text-[9px] sm:text-[10px] text-orange-400 mt-1 font-medium">{stats.shopeeQtySold.toLocaleString()} Pcs</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20 shrink-0">
+                            <Package className="w-5 h-5 sm:w-6 sm:h-6" />
+                            </div>
+                            <div>
+                            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500 mb-0.5">TikTok</p>
+                            <h3 className="text-sm sm:text-lg font-bold text-slate-100 leading-tight">{formatIDR(stats.tiktokGMV)}</h3>
+                            <p className="text-[9px] sm:text-[10px] text-sky-400 mt-1 font-medium">{stats.tiktokQtySold.toLocaleString()} Pcs</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+                            <Clock className="w-5 h-5 sm:w-6 sm:h-6" />
+                            </div>
+                            <div>
+                            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500 mb-0.5">Sesi Live</p>
+                            <h3 className="text-lg sm:text-2xl font-bold text-slate-100 leading-tight">{stats.totalSessions} Sesi</h3>
+                            </div>
+                        </div>
+                        </section>
+
+                        <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col">
+                        
+                        <div className="md:hidden flex items-center justify-center gap-2 py-2.5 px-4 bg-indigo-500/10 border-b border-indigo-500/10 text-indigo-300 text-[10px] font-medium animate-pulse">
+                            <ArrowRightLeft className="w-3 h-3" /> Geser tabel ke kanan untuk melihat rincian GMV & Foto
+                        </div>
+
+                        <div className="overflow-x-auto custom-scrollbar flex-1">
+                            <table className="w-full text-left text-xs sm:text-sm whitespace-nowrap">
+                            <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 uppercase tracking-wider">
+                                <tr>
+                                <th className="px-4 sm:px-6 py-3 sm:py-4 font-bold">Waktu</th>
+                                <th className="px-4 sm:px-6 py-3 sm:py-4 font-bold">Host</th>
+                                <th className="px-4 sm:px-6 py-3 sm:py-4 font-bold">Durasi</th>
+                                <th className="px-4 sm:px-6 py-3 sm:py-4 font-bold text-right">Shopee</th>
+                                <th className="px-4 sm:px-6 py-3 sm:py-4 font-bold text-right">TikTok</th>
+                                <th className="px-4 sm:px-6 py-3 sm:py-4 font-bold text-right">Total GMV</th>
+                                <th className="px-4 sm:px-6 py-3 sm:py-4 font-bold text-center">Bukti</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-800/60 bg-slate-900/40">
+                                {paginatedData.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="px-6 py-12 text-center text-slate-500">Data tidak ditemukan pada filter aktif.</td>
+                                </tr>
+                                ) : (
+                                paginatedData.map((row) => {
+                                    return (
+                                    <tr key={row.id} className="hover:bg-slate-850/60 transition-colors">
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4 font-medium text-slate-200">{row.tanggalWaktu}</td>
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4">
+                                        <span className="inline-flex items-center px-2.5 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-750">
+                                            {row.namaHost || 'Tidak Diketahui'}
+                                        </span>
+                                        </td>
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4 text-slate-300 font-medium">{row.durasiLive}</td>
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4 text-right">
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-orange-400">{row.produkShopee} Pcs</span>
+                                            <span className="text-[10px] sm:text-xs text-slate-500">{formatIDR(row.gmvShopee)}</span>
+                                        </div>
+                                        </td>
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4 text-right">
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-sky-400">{row.produkTiktok} Pcs</span>
+                                            <span className="text-[10px] sm:text-xs text-slate-500">{formatIDR(row.gmvTiktok)}</span>
+                                        </div>
+                                        </td>
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4 text-right font-bold text-emerald-400">{formatIDR(row.totalGmv)}</td>
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4 text-center">
+                                        {row.parsedImage ? (
+                                            <button 
+                                            onClick={() => setSelectedImage(row.parsedImage)}
+                                            className="p-1.5 sm:p-2 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 active:bg-indigo-500/30 border border-indigo-500/20 transition-all active:scale-90"
+                                            title="Lihat Bukti Foto"
+                                            >
+                                            <ImageIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                                            </button>
+                                        ) : (
+                                            <span className="text-slate-600">-</span>
+                                        )}
+                                        </td>
+                                    </tr>
+                                    );
+                                })
+                                )}
+                            </tbody>
+                            </table>
+                        </div>
+
+                        {filteredData.length > 0 && (
+                            <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-800/80 bg-slate-950/40 flex items-center justify-between">
+                            <span className="text-[10px] sm:text-xs text-slate-400">
+                                Hal <strong className="text-slate-200">{currentPage}</strong> / {totalPages}
+                            </span>
+                            <div className="flex gap-1.5 sm:gap-2">
+                                <button 
+                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} 
+                                disabled={currentPage === 1} 
+                                className="p-1.5 sm:p-2 rounded-lg bg-slate-800 text-slate-300 disabled:opacity-40 transition-all active:scale-90 touch-manipulation"
+                                >
+                                <ChevronLeft className="w-4 h-4 sm:w-4 sm:h-4"/>
+                                </button>
+                                <button 
+                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} 
+                                disabled={currentPage === totalPages} 
+                                className="p-1.5 sm:p-2 rounded-lg bg-slate-800 text-slate-300 disabled:opacity-40 transition-all active:scale-90 touch-manipulation"
+                                >
+                                <ChevronRight className="w-4 h-4 sm:w-4 sm:h-4"/>
+                                </button>
+                            </div>
+                            </div>
+                        )}
+                        </div>
+                    </div>
+                    ) : (
+                    !isSalaryUnlocked ? (
+                        <PinLock 
+                        onSuccess={() => setIsSalaryUnlocked(true)} 
+                        onCancel={() => setActiveTab('dashboard')} 
+                        />
+                    ) : (
+                        <div className="space-y-6 animate-in fade-in duration-300">
+                        
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 p-4 sm:p-5 border border-slate-800 rounded-2xl shadow-lg">
+                            <div>
+                            <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                                <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400" />
+                                Kalkulator & Slip Gaji
+                            </h3>
+                            <p className="text-[11px] sm:text-xs text-slate-400 mt-1">
+                                Tentukan tarif per sesi untuk tiap host lalu klik "Cetak Slip".
+                            </p>
+                            </div>
+                            
+                            <button 
+                            onClick={() => setIsSalaryUnlocked(false)}
+                            className="px-3 sm:px-4 py-2 sm:py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 text-[11px] sm:text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 border border-rose-500/20 transition-all active:scale-95 w-full sm:w-auto"
+                            >
+                            <Lock className="w-3.5 h-3.5" /> Kunci Kembali
+                            </button>
+                        </div>
+
+                        <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col">
+                            <div className="md:hidden flex items-center justify-center gap-2 py-2 px-4 bg-emerald-500/10 border-b border-emerald-500/10 text-emerald-400 text-[10px] font-medium animate-pulse">
+                            <ArrowRightLeft className="w-3 h-3" /> Geser tabel untuk input nominal & cetak
+                            </div>
+
+                            <div className="overflow-x-auto custom-scrollbar">
+                            <table className="w-full text-left text-xs sm:text-sm whitespace-nowrap">
+                                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 uppercase tracking-wider">
+                                <tr>
+                                    <th className="px-4 sm:px-6 py-3 sm:py-4 font-bold">Host</th>
+                                    <th className="px-4 sm:px-6 py-3 sm:py-4 font-bold text-center">Jml Sesi</th>
+                                    <th className="px-4 sm:px-6 py-3 sm:py-4 font-bold">Tarif / Sesi</th>
+                                    <th className="px-4 sm:px-6 py-3 sm:py-4 font-bold text-right">Total Transfer</th>
+                                    <th className="px-4 sm:px-6 py-3 sm:py-4 font-bold text-center">Aksi</th>
+                                </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-800/60 bg-slate-900/40">
+                                {salaryData.length === 0 ? (
+                                    <tr>
+                                    <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
+                                        Tidak ditemukan aktivitas sesi pada filter periode ini.
+                                    </td>
+                                    </tr>
+                                ) : (
+                                    salaryData.map((hostInfo) => {
+                                    const rate = salaryRates[hostInfo.name] || 0;
+                                    const totalSalary = hostInfo.sessions * rate;
+                                    
+                                    return (
+                                        <tr key={hostInfo.name} className="hover:bg-slate-850/60 transition-colors">
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4 font-bold text-slate-200">
+                                            <span className="flex items-center gap-1.5 sm:gap-2">
+                                            <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500" />
+                                            {hostInfo.name}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4 text-center">
+                                            <span className="inline-flex px-2 sm:px-3 py-1 bg-indigo-500/10 text-indigo-300 font-bold rounded-lg border border-indigo-500/20 text-xs">
+                                            {hostInfo.sessions}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4">
+                                            <div className="relative w-[130px] sm:w-[160px]">
+                                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 font-medium text-xs sm:text-sm">Rp</span>
+                                            <input 
+                                                type="text"
+                                                inputMode="numeric"
+                                                value={formatIDRInput(rate)}
+                                                onChange={(e) => handleSalaryRateChange(hostInfo.name, e.target.value)}
+                                                placeholder="0"
+                                                className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 pl-8 pr-2 text-slate-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold touch-manipulation"
+                                            />
+                                            </div>
+                                        </td>
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4 text-right font-extrabold text-emerald-400 text-sm sm:text-base">
+                                            {formatIDR(totalSalary)}
+                                        </td>
+                                        <td className="px-4 sm:px-6 py-3 sm:py-4 text-center">
+                                            <button
+                                            onClick={() => setSlipToPrint({ ...hostInfo, rate, totalSalary })}
+                                            disabled={totalSalary === 0}
+                                            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[10px] sm:text-xs font-semibold rounded-lg transition-all active:scale-95 border border-slate-700 touch-manipulation"
+                                            >
+                                            <Receipt className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Cetak</span>
+                                            </button>
+                                        </td>
+                                        </tr>
+                                    );
+                                    })
+                                )}
+                                </tbody>
+                            </table>
+                            </div>
+                        </div>
+                        </div>
+                    )
+                    )}
+                </div>
+
+                {selectedImage && !slipToPrint && (
+                    <div 
+                    className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-slate-950/95 backdrop-blur-sm" 
+                    onClick={() => setSelectedImage(null)}
+                    >
+                    <div className="relative w-full max-w-4xl h-[90vh] sm:h-[85vh] flex flex-col bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-3 sm:mb-4">
+                        <h3 className="text-sm sm:text-lg font-bold text-white flex items-center gap-2">
+                            <ImageIcon className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400" /> Bukti Gambar
+                        </h3>
+                        <button className="p-2 sm:p-1.5 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors touch-manipulation" onClick={() => setSelectedImage(null)}>
+                            <X className="w-5 h-5" />
+                        </button>
+                        </div>
+                        
+                        <div className="w-full flex-1 bg-slate-950 rounded-xl sm:rounded-2xl overflow-hidden relative flex items-center justify-center border border-slate-800">
+                        {selectedImage.isDrive ? (
+                            <iframe 
+                            src={`https://drive.google.com/file/d/${selectedImage.driveId}/preview`} 
+                            className="w-full h-full border-0"
+                            title="Google Drive Preview"
+                            allow="autoplay"
+                            ></iframe>
+                        ) : (
+                            <img src={selectedImage.url} alt="Bukti" className="w-full h-full object-contain" />
+                        )}
+                        </div>
+
+                        <div className="mt-3 sm:mt-4 flex justify-end">
+                        <a 
+                            href={selectedImage.originalUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="w-full sm:w-auto text-center px-4 sm:px-5 py-3 sm:py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-semibold rounded-xl sm:rounded-xl shadow-lg transition-colors active:scale-95 touch-manipulation"
+                        >
+                            Buka Link di Tab Baru
+                        </a>
+                        </div>
+                    </div>
+                    </div>
+                )}
+
+                {slipToPrint && (
+                    <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-slate-950/90 overflow-y-auto p-0 sm:p-4 print:bg-white print:block print:p-0 print:static">
+                    
+                    <div className="sticky top-0 sm:absolute sm:top-6 sm:right-6 w-full sm:w-auto bg-slate-900 sm:bg-transparent border-b border-slate-800 sm:border-0 p-3 sm:p-0 flex justify-end gap-2 sm:gap-3 z-10 print:hidden">
+                        <button 
+                        onClick={handlePrint} 
+                        className="flex-1 sm:flex-none flex justify-center items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-lg transition-all active:scale-95 touch-manipulation"
+                        >
+                        <Printer className="w-4 h-4 sm:w-5 sm:h-5" /> Cetak 
+                        </button>
+                        <button 
+                        onClick={() => setSlipToPrint(null)} 
+                        className="flex items-center justify-center px-4 py-2.5 sm:p-2.5 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-all active:scale-95 touch-manipulation"
+                        >
+                        <X className="w-4 h-4 sm:w-5 sm:h-5" /> <span className="sm:hidden text-xs font-semibold ml-1">Tutup</span>
+                        </button>
+                    </div>
+
+                    <div className="bg-white text-slate-900 w-full max-w-2xl mx-auto rounded-none sm:rounded-2xl shadow-2xl p-5 sm:p-8 md:p-10 min-h-screen sm:min-h-0 print:shadow-none print:p-0 print:m-0 font-sans print:rounded-none">
+                        
+                        <div className="text-center border-b-2 border-slate-300 pb-4 sm:pb-5 mb-4 sm:mb-5 mt-4 sm:mt-0">
+                        <h1 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight">SLIP GAJI HOST STREAMER</h1>
+                        <p className="text-slate-500 text-[10px] sm:text-xs mt-1 font-semibold">
+                            Periode Rekap: {startDateStr ? formatReadableDate(new Date(startDateStr)) : 'Awal'} s.d {endDateStr ? formatReadableDate(new Date(endDateStr)) : 'Sekarang'}
+                        </p>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 text-[10px] sm:text-xs mb-5 sm:mb-6 border-b border-slate-200 pb-4">
+                        <div>
+                            <p className="text-slate-400 font-semibold uppercase tracking-wider">Nama Penerima</p>
+                            <p className="font-extrabold text-slate-950 text-sm sm:text-base mt-0.5">{slipToPrint.name}</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-slate-400 font-semibold uppercase tracking-wider">Tanggal Dibuat</p>
+                            <p className="font-bold text-slate-800 text-xs sm:text-sm mt-0.5">{formatReadableDate(new Date())}</p>
+                        </div>
+                        </div>
+
+                        <div className="bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-200 mb-5 sm:mb-6 text-[10px] sm:text-xs space-y-1.5 sm:space-y-2 print:bg-transparent print:border-slate-300">
+                        <div className="flex justify-between">
+                            <span className="text-slate-500">Total Sesi Terdaftar:</span>
+                            <span className="font-bold text-slate-800">{slipToPrint.sessions} Sesi</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-slate-500">Honor per Sesi:</span>
+                            <span className="font-bold text-slate-800">{formatIDR(slipToPrint.rate)}</span>
+                        </div>
+                        </div>
+
+                        <div className="mb-5 sm:mb-6">
+                        <h3 className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 sm:mb-3">Daftar Sesi Rekapitulasi</h3>
+                        <div className="border border-slate-200 rounded-lg overflow-x-auto">
+                            <table className="w-full text-left text-[10px] sm:text-xs min-w-[300px]">
+                            <thead className="bg-slate-100 border-b border-slate-200 text-slate-700">
+                                <tr>
+                                <th className="py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-center w-6 sm:w-8">No</th>
+                                <th className="py-1.5 sm:py-2 px-2 sm:px-3 font-semibold">Waktu Sesi</th>
+                                <th className="py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-center w-16 sm:w-20">Durasi</th>
+                                <th className="py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-right">Total GMV</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-150">
+                                {slipToPrint.sessionDetails && slipToPrint.sessionDetails.map((sesi, index) => (
+                                <tr key={sesi.id || index} className="text-slate-800">
+                                    <td className="py-1.5 sm:py-2 px-2 sm:px-3 text-center text-slate-400 font-medium">{index + 1}</td>
+                                    <td className="py-1.5 sm:py-2 px-2 sm:px-3 font-semibold">{sesi.tanggalWaktu}</td>
+                                    <td className="py-1.5 sm:py-2 px-2 sm:px-3 text-center text-slate-600">{sesi.durasiLive}</td>
+                                    <td className="py-1.5 sm:py-2 px-2 sm:px-3 text-right font-semibold">{formatIDR(sesi.totalGmv)}</td>
+                                </tr>
+                                ))}
+                            </tbody>
+                            <tfoot className="bg-slate-50 font-bold border-t border-slate-200 print:bg-slate-100">
+                                <tr>
+                                <td colSpan="3" className="py-2 px-2 sm:px-3 text-right uppercase text-[8px] sm:text-[10px] text-slate-500 tracking-wider">
+                                    Total Akumulasi GMV
+                                </td>
+                                <td className="py-2 px-2 sm:px-3 text-right text-indigo-700 print:text-black font-extrabold">
+                                    {formatIDR(slipToPrint.totalGmvPeriode)}
+                                </td>
+                                </tr>
+                            </tfoot>
+                            </table>
+                        </div>
+                        </div>
+
+                        <div className="bg-slate-900 text-white p-4 sm:p-5 rounded-xl flex justify-between items-center print:bg-slate-100 print:text-black print:border-2 print:border-slate-900 mb-6 sm:mb-8">
+                        <span className="font-extrabold text-[10px] sm:text-xs uppercase tracking-widest text-slate-300 print:text-slate-600">Total Pembayaran</span>
+                        <span className="text-lg sm:text-xl font-black">{formatIDR(slipToPrint.totalSalary)}</span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 text-center text-[10px] sm:text-xs mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-slate-150">
+                        <div>
+                            <p className="text-slate-400 font-semibold mb-12 sm:mb-16">Penerima (Host),</p>
+                            <p className="font-bold text-slate-900 uppercase underline decoration-solid decoration-1 underline-offset-4">{slipToPrint.name}</p>
+                        </div>
+                        <div>
+                            <p className="text-slate-400 font-semibold mb-12 sm:mb-16">Finance / Manajemen,</p>
+                            <p className="font-bold text-slate-900">Aditya / Team Leader</p>
+                        </div>
+                        </div>
+
+                        <p className="block text-center text-[8px] sm:text-[9px] text-slate-400 mt-10 sm:mt-16 border-t border-dotted border-slate-300 pt-3 sm:pt-4 pb-6 sm:pb-0">
+                        Dokumen ini dihasilkan secara otomatis dari sistem dan sah tanpa tanda tangan basah.
+                        </p>
+                    </div>
+                    </div>
+                )}
+                </div>
+            );
+        }
+
+        // ==========================================
+        // RENDER APLIKASI
+        // ==========================================
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
