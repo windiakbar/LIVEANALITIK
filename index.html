@@ -130,6 +130,42 @@
             return parseInt(num, 10).toLocaleString('id-ID');
         };
 
+        const parseDurationToHours = (durationStr) => {
+            if (!durationStr) return 0;
+            const str = String(durationStr).trim().toLowerCase();
+            
+            // Format HH:mm:ss atau HH:mm (jika masih digunakan)
+            if (str.includes(':')) {
+                const parts = str.split(':').map(Number);
+                let totalMinutes = 0;
+                if (parts.length === 3) {
+                    totalMinutes = (parts[0] || 0) * 60 + (parts[1] || 0) + ((parts[2] || 0) / 60);
+                } else if (parts.length === 2) {
+                    totalMinutes = (parts[0] || 0) * 60 + (parts[1] || 0);
+                }
+                const hours = Math.floor(totalMinutes / 60);
+                const remainder = totalMinutes % 60;
+                // Jika sisa menit mencapai 59, bulatkan ke 1 jam. Jika tidak, abaikan.
+                return remainder >= 59 ? hours + 1 : hours;
+            }
+            
+            // Jika ada kata jam (pengecualian jika ditulis manual "2 jam")
+            if (str.includes('jam') || str.includes('hour') || str.includes('h')) {
+                const num = parseFloat(str.replace(/[^0-9.,]/g, '').replace(',', '.'));
+                return isNaN(num) ? 0 : Math.floor(num); // Langsung bulatkan ke bawah untuk teks "jam"
+            }
+
+            // Default asumsi data: Karena data di spreadsheet adalah MENIT
+            const num = parseFloat(str.replace(/[^0-9.,]/g, '').replace(',', '.'));
+            if (isNaN(num)) return 0;
+            
+            const hours = Math.floor(num / 60);
+            const remainder = num % 60;
+            
+            // Jika tidak sampai 59 menit, menit lebih tidak dihitung (dibuang)
+            return remainder >= 59 ? hours + 1 : hours;
+        };
+
         const parseDateString = (dateStr) => {
             if (!dateStr) return null;
             try {
@@ -322,6 +358,7 @@
                                 parsedDate: parsedDate,             
                                 namaHost: getVal(1),               
                                 durasiLive: getVal(5),             
+                                parsedDurationHours: parseDurationToHours(getVal(5)),
                                 produkShopee: getVal(6) || '0',    
                                 gmvShopee: getVal(7) || '0',       
                                 produkTiktok: getVal(8) || '0',    
@@ -447,14 +484,15 @@
                     const gmvVal = parseFloat(String(item.totalGmv).replace(/[^0-9.-]+/g, "")) || 0;
 
                     if (!hostStats[hName]) {
-                        hostStats[hName] = { name: hName, sessions: 0, totalGmvPeriode: 0, sessionDetails: [] };
+                        hostStats[hName] = { name: hName, sessions: 0, totalHours: 0, totalGmvPeriode: 0, sessionDetails: [] };
                     }
                     hostStats[hName].sessions += 1;
+                    hostStats[hName].totalHours += item.parsedDurationHours || 0;
                     hostStats[hName].totalGmvPeriode += gmvVal;
                     hostStats[hName].sessionDetails.push(item);
                 });
                 
-                return Object.values(hostStats).sort((a, b) => b.sessions - a.sessions);
+                return Object.values(hostStats).sort((a, b) => b.totalHours - a.totalHours);
             }, [data, startDateStr, endDateStr]);
 
             const handleSalaryRateChange = (hostName, value) => {
@@ -797,7 +835,7 @@
                                 Kalkulator & Slip Gaji
                             </h3>
                             <p className="text-[11px] sm:text-xs text-slate-400 mt-1">
-                                Tentukan tarif per sesi untuk tiap host lalu klik "Cetak Slip".
+                                Tentukan tarif per jam untuk tiap host lalu klik "Cetak Slip".
                             </p>
                             </div>
                             
@@ -819,8 +857,8 @@
                                 <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 uppercase tracking-wider">
                                 <tr>
                                     <th className="px-4 sm:px-6 py-3 sm:py-4 font-bold">Host</th>
-                                    <th className="px-4 sm:px-6 py-3 sm:py-4 font-bold text-center">Jml Sesi</th>
-                                    <th className="px-4 sm:px-6 py-3 sm:py-4 font-bold">Tarif / Sesi</th>
+                                    <th className="px-4 sm:px-6 py-3 sm:py-4 font-bold text-center">Total Jam</th>
+                                    <th className="px-4 sm:px-6 py-3 sm:py-4 font-bold">Tarif / Jam</th>
                                     <th className="px-4 sm:px-6 py-3 sm:py-4 font-bold text-right">Total Transfer</th>
                                     <th className="px-4 sm:px-6 py-3 sm:py-4 font-bold text-center">Aksi</th>
                                 </tr>
@@ -835,7 +873,7 @@
                                 ) : (
                                     salaryData.map((hostInfo) => {
                                     const rate = salaryRates[hostInfo.name] || 0;
-                                    const totalSalary = hostInfo.sessions * rate;
+                                    const totalSalary = Math.round(hostInfo.totalHours * rate);
                                     
                                     return (
                                         <tr key={hostInfo.name} className="hover:bg-slate-850/60 transition-colors">
@@ -846,9 +884,12 @@
                                             </span>
                                         </td>
                                         <td className="px-4 sm:px-6 py-3 sm:py-4 text-center">
-                                            <span className="inline-flex px-2 sm:px-3 py-1 bg-indigo-500/10 text-indigo-300 font-bold rounded-lg border border-indigo-500/20 text-xs">
-                                            {hostInfo.sessions}
-                                            </span>
+                                            <div className="flex flex-col items-center">
+                                                <span className="inline-flex px-2 sm:px-3 py-1 bg-indigo-500/10 text-indigo-300 font-bold rounded-lg border border-indigo-500/20 text-xs">
+                                                {hostInfo.totalHours.toFixed(2)} Jam
+                                                </span>
+                                                <span className="text-[10px] text-slate-500 mt-1">{hostInfo.sessions} Sesi</span>
+                                            </div>
                                         </td>
                                         <td className="px-4 sm:px-6 py-3 sm:py-4">
                                             <div className="relative w-[130px] sm:w-[160px]">
@@ -970,11 +1011,11 @@
 
                         <div className="bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-200 mb-5 sm:mb-6 text-[10px] sm:text-xs space-y-1.5 sm:space-y-2 print:bg-transparent print:border-slate-300">
                         <div className="flex justify-between">
-                            <span className="text-slate-500">Total Sesi Terdaftar:</span>
-                            <span className="font-bold text-slate-800">{slipToPrint.sessions} Sesi</span>
+                            <span className="text-slate-500">Total Waktu Live:</span>
+                            <span className="font-bold text-slate-800">{slipToPrint.totalHours?.toFixed(2) || 0} Jam <span className="text-slate-500 font-normal">({slipToPrint.sessions} Sesi)</span></span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-slate-500">Honor per Sesi:</span>
+                            <span className="text-slate-500">Honor per Jam:</span>
                             <span className="font-bold text-slate-800">{formatIDR(slipToPrint.rate)}</span>
                         </div>
                         </div>
@@ -1027,7 +1068,7 @@
                         </div>
                         <div>
                             <p className="text-slate-400 font-semibold mb-12 sm:mb-16">Finance / Manajemen,</p>
-                            <p className="font-bold text-slate-900">maswest / Team Leader</p>
+                            <p className="font-bold text-slate-900">MasWest / Team Leader</p>
                         </div>
                         </div>
 
